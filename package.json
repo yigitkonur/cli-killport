@@ -1,0 +1,52 @@
+{
+  "name": "cli-killport",
+  "version": "1.0.0",
+  "description": "Kill any process occupying a port. Unix-first, zero-zombie, one command.",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "killport": "dist/cli.js",
+    "kp": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "tsc"
+  },
+  "keywords": [
+    "kill",
+    "port",
+    "process",
+    "cli",
+    "lsof",
+    "fuser",
+    "zombie",
+    "sigkill",
+    "unix",
+    "macos",
+    "linux",
+    "npx"
+  ],
+  "author": "Yigit Konur",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yigitkonur/cli-killport.git"
+  },
+  "homepage": "https://github.com/yigitkonur/cli-killport#readme",
+  "bugs": {
+    "url": "https://github.com/yigitkonur/cli-killport/issues"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
