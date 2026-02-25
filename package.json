@@ -1,6 +1,6 @@
 {
   "name": "cli-killport",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Kill any process occupying a port. Unix-first, zero-zombie, one command.",
   "type": "module",
   "main": "dist/cli.js",

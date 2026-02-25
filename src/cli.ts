@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
 import { execSync, spawnSync } from 'node:child_process';
-import { platform } from 'node:os';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { createInterface } from 'node:readline';
+import { homedir, platform } from 'node:os';
+import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import figlet from 'figlet';
 
@@ -294,8 +297,99 @@ function displayResults(killed: number[], failed: number[], port: number): void 
   console.log();
 }
 
+// ── Self-Install ─────────────────────────────────────────────────────
+const INSTALL_MARKER = join(homedir(), '.config', 'killport', '.installed');
+
+function isInstalledGlobally(): boolean {
+  const which = exec('which killport 2>/dev/null');
+  if (!which) return false;
+  // If the resolved path is inside an npx cache, it's not a real global install
+  if (which.includes('_npx') || which.includes('.npm/_npx')) return false;
+  return true;
+}
+
+function promptYesNo(question: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase().startsWith('y'));
+    });
+  });
+}
+
+async function offerGlobalInstall(): Promise<void> {
+  // Skip if not interactive, already prompted, or already installed
+  if (!process.stdout.isTTY || process.env.NO_COLOR) return;
+  if (existsSync(INSTALL_MARKER)) return;
+  if (isInstalledGlobally()) {
+    // Already installed — write marker and skip
+    mkdirSync(join(homedir(), '.config', 'killport'), { recursive: true });
+    writeFileSync(INSTALL_MARKER, new Date().toISOString());
+    return;
+  }
+
+  console.log(`  ${chalk.gray('\u2500'.repeat(58))}`);
+  console.log();
+  console.log(`  ${sym.info} ${chalk.bold.white('Install globally?')} Run ${chalk.hex('#00ffc8')('killport')} and ${chalk.hex('#00ffc8')('kp')} from anywhere.`);
+  console.log();
+
+  const yes = await promptYesNo(`  ${chalk.hex('#00ffc8')('\u25B6')} Install killport system-wide? ${chalk.gray('[y/N]')} `);
+
+  if (!yes) {
+    // Write marker so we don't ask again
+    mkdirSync(join(homedir(), '.config', 'killport'), { recursive: true });
+    writeFileSync(INSTALL_MARKER, 'declined');
+    console.log();
+    console.log(`  ${chalk.gray('No problem. Use')} ${chalk.hex('#00ffc8')('npx cli-killport <port>')} ${chalk.gray('anytime.')}`);
+    console.log();
+    return;
+  }
+
+  console.log();
+  console.log(`  ${sym.bullet} Installing ${chalk.hex('#00ffc8')('cli-killport')} globally...`);
+  console.log();
+
+  try {
+    // Try without sudo first
+    execSync('npm install -g cli-killport', { stdio: 'inherit', timeout: 30000 });
+  } catch {
+    // Permission error — retry with sudo on Unix
+    console.log();
+    console.log(`  ${sym.warn} ${chalk.yellow('Permission denied.')} Retrying with ${chalk.bold('sudo')}...`);
+    console.log();
+    try {
+      execSync('sudo npm install -g cli-killport', { stdio: 'inherit', timeout: 60000 });
+    } catch {
+      console.log();
+      console.log(`  ${sym.cross} ${chalk.red('Install failed.')} You can install manually:`);
+      console.log(`     ${chalk.gray('$')} sudo npm install -g cli-killport`);
+      console.log();
+      // Still mark so we don't nag
+      mkdirSync(join(homedir(), '.config', 'killport'), { recursive: true });
+      writeFileSync(INSTALL_MARKER, 'failed');
+      return;
+    }
+  }
+
+  // Verify
+  const killportPath = exec('which killport 2>/dev/null');
+  const kpPath = exec('which kp 2>/dev/null');
+
+  console.log();
+  console.log(`  ${sym.check} ${chalk.green.bold('Installed!')} Commands available system-wide:`);
+  if (killportPath) console.log(`     ${chalk.hex('#00ffc8')('killport')} ${chalk.gray('\u2192')} ${chalk.gray(killportPath)}`);
+  if (kpPath) console.log(`     ${chalk.hex('#00ffc8')('kp')}       ${chalk.gray('\u2192')} ${chalk.gray(kpPath)}`);
+  console.log();
+  console.log(`  ${chalk.gray('Usage:')} ${chalk.hex('#00ffc8')('killport 3000')} ${chalk.gray('or')} ${chalk.hex('#00ffc8')('kp 8080')}`);
+  console.log();
+
+  mkdirSync(join(homedir(), '.config', 'killport'), { recursive: true });
+  writeFileSync(INSTALL_MARKER, new Date().toISOString());
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
-function main(): void {
+async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
   // Help
@@ -349,6 +443,7 @@ function main(): void {
   if (procs.length === 0) {
     console.log(`  ${sym.info} No processes found on port ${chalk.hex('#00ffc8').bold(String(port))} ${chalk.gray('\u2014 port is already free')}`);
     console.log();
+    await offerGlobalInstall();
     process.exit(0);
   }
 
@@ -390,6 +485,9 @@ function main(): void {
 
   // Show results
   displayResults(totalKilled, totalFailed, port);
+
+  // Offer global install on first run
+  await offerGlobalInstall();
 
   process.exit(totalFailed.length > 0 ? 1 : 0);
 }
