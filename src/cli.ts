@@ -3,6 +3,7 @@
 import { execSync, spawnSync } from 'node:child_process';
 import { platform } from 'node:os';
 import { createRequire } from 'node:module';
+import figlet from 'figlet';
 
 // ── Dynamic chalk import (ESM) ──────────────────────────────────────
 const chalk = (await import('chalk')).default;
@@ -23,50 +24,35 @@ interface ProcessInfo {
 }
 
 // ── ASCII Banner ─────────────────────────────────────────────────────
-//  Letters: 4 chars wide, 1-space separated, 3 rows tall
-//  "kill" in warm red→orange gradient, "port" in bold accent (#00ffc8)
+//  "kill" in warm red→orange gradient, "port" in bold mint accent (#00ffc8)
+//  Generated via figlet ANSI Shadow font, split and colored per-half
 function showBanner(): void {
   if (!process.stdout.isTTY || process.env.NO_COLOR) return;
 
-  // k i l l p o r t
-  const glyphs: string[][] = [
-    ['\u2588 \u2584\u2588', '\u2588\u2580\u2588 ', '\u2588  \u2588', '\u2588  \u2588'],  // k i l l
-    ['\u2588\u2588\u2580 ', '\u2588 \u2588 ', '\u2588  \u2588', '\u2588  \u2588'],  // k i l l
-    ['\u2588 \u2580\u2588', '\u2580 \u2580 ', '\u2580\u2580\u2580\u2580', '\u2580\u2580\u2580\u2580'],  // k i l l
-  ];
+  const killLines = figlet.textSync('kill', { font: 'ANSI Shadow' }).split('\n');
+  const portLines = figlet.textSync('port', { font: 'ANSI Shadow' }).split('\n');
 
-  const portGlyphs: string[][] = [
-    ['\u2588\u2580\u2580\u2588', '\u2588\u2580\u2580\u2588', '\u2588\u2580\u2580\u2584', '\u2580\u2588\u2588\u2580'],  // p o r t
-    ['\u2588\u2580\u2580 ', '\u2588 \u2588', '\u2588\u2588\u2580 ', ' \u2588\u2588 '],  // p o r t
-    ['\u2588   ', '\u2580\u2580\u2580\u2580', '\u2588 \u2580\u2588', ' \u2580\u2580 '],  // p o r t
+  // Per-row gradient for "kill": red → orange top-to-bottom
+  const killGradient = [
+    chalk.hex('#ff4d4d'),
+    chalk.hex('#ff5a3a'),
+    chalk.hex('#ff6b35'),
+    chalk.hex('#ff7c28'),
+    chalk.hex('#ff8c1a'),
+    chalk.hex('#ffaa00'),
+    chalk.hex('#ffaa00'),
   ];
-
-  // "kill" gradient: warm red → orange
-  const killColors = [
-    chalk.hex('#ff4d4d'),  // k
-    chalk.hex('#ff6b35'),  // i
-    chalk.hex('#ff8c1a'),  // l
-    chalk.hex('#ffaa00'),  // l
-  ];
-
-  // "port" in bold mint accent (like 's' in continues)
   const portColor = chalk.hex('#00ffc8').bold;
 
   console.log();
-  for (let row = 0; row < 3; row++) {
-    let line = '  ';
-    // "kill" letters
-    for (let i = 0; i < glyphs[0].length; i++) {
-      line += killColors[i](glyphs[row][i]);
-      if (i < glyphs[0].length - 1) line += ' ';
-    }
-    line += ' ';
-    // "port" letters
-    for (let i = 0; i < portGlyphs[0].length; i++) {
-      line += portColor(portGlyphs[row][i]);
-      if (i < portGlyphs[0].length - 1) line += ' ';
-    }
-    console.log(line);
+  const rows = Math.max(killLines.length, portLines.length);
+  for (let i = 0; i < rows; i++) {
+    const kLine = killLines[i] || '';
+    const pLine = portLines[i] || '';
+    // Skip fully empty trailing rows
+    if (!kLine.trim() && !pLine.trim()) continue;
+    const colorFn = killGradient[Math.min(i, killGradient.length - 1)];
+    console.log('  ' + colorFn(kLine) + portColor(pLine));
   }
 
   console.log();

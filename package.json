@@ -1,6 +1,6 @@
 {
   "name": "cli-killport",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Kill any process occupying a port. Unix-first, zero-zombie, one command.",
   "type": "module",
   "main": "dist/cli.js",
@@ -12,6 +12,7 @@
     "dist"
   ],
   "scripts": {
+    "start": "node dist/cli.js",
     "build": "tsc",
     "prepublishOnly": "tsc"
   },
@@ -40,9 +41,11 @@
     "url": "https://github.com/yigitkonur/cli-killport/issues"
   },
   "dependencies": {
-    "chalk": "^5.4.1"
+    "chalk": "^5.4.1",
+    "figlet": "^1.10.0"
   },
   "devDependencies": {
+    "@types/figlet": "^1.7.0",
     "@types/node": "^25.3.0",
     "typescript": "^5.7.3"
   },
